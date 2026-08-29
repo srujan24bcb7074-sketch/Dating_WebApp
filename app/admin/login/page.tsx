@@ -9,17 +9,42 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
     if (!passcode) {
       setError('Please enter staff passcode');
       return;
     }
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('staff_auth', 'true');
+
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Invalid staff passcode');
+        setIsLoading(false);
+        return;
+      }
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('staff_auth', 'true');
+      }
+      router.push('/admin');
+    } catch (err: any) {
+      setError(err.message || 'Failed to connect to authentication server');
+      setIsLoading(false);
     }
-    router.push('/admin');
   };
 
   return (
@@ -57,9 +82,16 @@ export default function AdminLoginPage() {
 
           <button
             type="submit"
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 text-white font-extrabold text-sm shadow-xl shadow-purple-600/20 hover:scale-[1.01] transition flex items-center justify-center gap-2"
+            disabled={isLoading}
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 text-white font-extrabold text-sm shadow-xl shadow-purple-600/20 hover:scale-[1.01] transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Access Admin Dashboard <ArrowRight className="w-4 h-4" />
+            {isLoading ? (
+              <span>Verifying Passcode...</span>
+            ) : (
+              <>
+                Access Admin Dashboard <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 
